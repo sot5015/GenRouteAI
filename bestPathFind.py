@@ -32,7 +32,12 @@ def min_sum_path_with_trace(npy_path, start, end):
 
             if 0 <= nx < rows and 0 <= ny < cols:
 
-
+                if  grid[x, y] < grid[nx, ny]:
+                    new_cost = cost + (grid[nx, ny] - grid[x, y]) * 2
+                elif  grid[x, y] == grid[nx, ny]:
+                    new_cost = cost +  3
+                else:
+                    new_cost = cost + ( grid[x, y] - grid[nx, ny] ) * 4
 
                 if (nx, ny) not in costs or new_cost < costs[(nx, ny)]:
                     costs[(nx, ny)] = new_cost
