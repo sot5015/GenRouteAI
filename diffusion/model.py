@@ -10,17 +10,23 @@ class SinusoidalTimeEmbedding(nn.Module):
 
     def forward(self, t):
         half_dim = self.dim // 2
-        emb = torch.exp(torch.arange(half_dim, dtype=torch.float32) * -(torch.log(torch.tensor(10000.0)) / half_dim))
-        emb = t[:, None] * emb[None, :]  # shape [B, dim/2]
+        device = t.device
+        emb = torch.exp(
+            torch.arange(half_dim, dtype=torch.float32, device=device)
+            * -(torch.log(torch.tensor(10000.0, device=device)) / half_dim)
+        )
+        emb = t[:, None] * emb[None, :]
         emb = torch.cat([torch.sin(emb), torch.cos(emb)], dim=-1)
-        return emb  # shape [B, dim]
+        return emb
 
-# Basic convolutional block
+# conv block with BatchNorm
 def conv_block(in_channels, out_channels):
     return nn.Sequential(
         nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1),
+        nn.BatchNorm2d(out_channels),
         nn.ReLU(),
         nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1),
+        nn.BatchNorm2d(out_channels),
         nn.ReLU()
     )
 
@@ -61,8 +67,8 @@ class UNet(nn.Module):
         t3 = self.time_proj3(t_emb).view(B, 256, 1, 1)
 
         # Encoder
-        x1 = self.enc1(x)              # [B, 64, H, W]
-        x1 = x1 + t1                   # add time after encoding
+        x1 = self.enc1(x)
+        x1 = x1 + t1
         x2 = self.pool1(x1)
         x2 = self.enc2(x2)
         x2 = x2 + t2
@@ -75,7 +81,6 @@ class UNet(nn.Module):
         # Decoder
         x = self.up2(x3)
         x = self.dec2(torch.cat([x, x2], dim=1))
-
         x = self.up1(x)
         x = self.dec1(torch.cat([x, x1], dim=1))
 
@@ -87,4 +92,4 @@ if __name__ == "__main__":
     x = torch.randn(4, 1, 64, 64)
     t = torch.randint(0, 1000, (4,))
     out = model(x, t)
-    print("Output shape:", out.shape)  # should be [4, 1, 64, 64]
+    print("Output shape:", out.shape)
