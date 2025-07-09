@@ -2,6 +2,7 @@ import numpy as np
 import heapq
 from tqdm import tqdm
 import matplotlib.pyplot as plt
+import os
 
 def min_sum_path_with_trace(npy_path, start):
     grid = np.load(npy_path, allow_pickle=True)
@@ -38,7 +39,7 @@ def min_sum_path_with_trace(npy_path, start):
                 elif grid[x, y] == grid[nx, ny]:
                     step_cost = 1
                 else:
-                    step_cost = (grid[x, y] - grid[nx, ny]) * 0.1
+                    step_cost = (grid[x, y] - grid[nx, ny]) * 0.02
 
                 new_cost = cost + step_cost
 
@@ -57,17 +58,30 @@ def min_sum_path_with_trace(npy_path, start):
     return costmap
 
 if __name__ == "__main__":
-    costmap = min_sum_path_with_trace("data/elevation/hei1.npy", (0, 0))
-    
-    # Replace inf with large number
-    costmap[np.isinf(costmap)] = 1e6
+    elevation_dir = "data/elevation"
+    costmap_dir = "data/costmaps"
+    os.makedirs(costmap_dir, exist_ok=True)
 
-    # Save to file
-    np.save("data/costmaps/hei1_costmap.npy", costmap)
-    
-    # Print some basic stats
-    print("Min cost:", np.min(costmap))
-    print("Max cost:", np.max(costmap))
-    print("Any inf:", np.isinf(costmap).any())
-    
-    
+    files = [f for f in os.listdir(elevation_dir) if f.endswith(".npy")]
+    print(f"Found {len(files)} elevation maps.")
+
+    for f in files:
+        path = os.path.join(elevation_dir, f)
+        out_name = f.replace(".npy", "_costmap.npy")
+        out_path = os.path.join(costmap_dir, out_name)
+
+        if os.path.exists(out_path):
+            print(f"Skipping {f} - already processed.")
+            continue
+
+        print(f"\nProcessing: {f}")
+
+        costmap = min_sum_path_with_trace(path, (0, 0))
+        costmap[np.isinf(costmap)] = 1e6
+
+        np.save(out_path, costmap)
+
+        print("→ Saved:", out_path)
+        print("  Min cost:", np.min(costmap))
+        print("  Max cost:", np.max(costmap))
+        print("  Any inf:", np.isinf(costmap).any())

@@ -26,5 +26,5 @@ for img_file in heightmap_dir.glob("*"):
         min_val=min_val,
         max_val=max_val,
         output_npy=output_file,
-        show_plot=True  # turn to True to preview each one
+        show_plot=False  # turn to True to preview each one
     )
