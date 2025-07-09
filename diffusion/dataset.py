@@ -41,6 +41,15 @@ class HeightmapDataset(Dataset):
             align_corners=False
         ).squeeze(0)
 
+        # Normalize costmap to [-1, 1]
+        cmin = costmap.min()
+        cmax = costmap.max()
+        if (cmax - cmin) > 0:
+            costmap = (costmap - cmin) / (cmax - cmin)
+            costmap = costmap * 2 - 1
+        else:
+            costmap = torch.zeros_like(costmap)
+
         # Optional: Masking
         if self.apply_masking:
             mask = self.generate_random_mask(heightmap.shape[-2:])

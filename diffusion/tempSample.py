@@ -93,38 +93,38 @@ def main(args):
         print(f"Loaded costmap: {costmap_name}")
     
     # ----- Generate samples -----
-    for i in range(args.num_samples):
-        sample_img = sample(
-            model,
-            alpha,
-            alpha_bar,
-            T,
-            shape=(1, 256, 256),
-            device=device
-        )
+    # for i in range(args.num_samples):
+    sample_img = sample(
+        model,
+        alpha,
+        alpha_bar,
+        T,
+        shape=(1, 256, 256),
+        device=device
+    )
 
-        # Normalize to [0, 1] for visualization
-        sample_img_vis = (sample_img + 1) / 2
-        sample_img_vis = sample_img_vis.clamp(0, 1)
-        
-         # Plot
-        plt.imshow(sample_img_vis.squeeze().cpu().numpy(), cmap="viridis")
-        plt.title(f"Sample from {costmap_name}" if costmap_name else f"Sample {i}")
-        plt.colorbar()
-        plt.show()
+    # Normalize to [0, 1] for visualization
+    sample_img_vis = (sample_img + 1) / 2
+    sample_img_vis = sample_img_vis.clamp(0, 1)
+    
+        # Plot
+    plt.imshow(sample_img_vis.squeeze().cpu().numpy(), cmap="viridis")
+    plt.title(f"Sample from {costmap_name}" if costmap_name else f"Sample 1")
+    plt.colorbar()
+    plt.show()
 
-        if costmap_name:
-            sample_filename = f"sample_from_{costmap_name.replace('.npy','.png')}"
-        else:
-            sample_filename = f"sample_{i}.png"
+    if costmap_name:
+        sample_filename = f"sample_from_{costmap_name.replace('.npy','.png')}"
+    else:
+        sample_filename = f"sample_1.png"
 
-        out_path = run_dir / sample_filename
-        plt.imsave(
-            out_path,
-            sample_img_vis.squeeze().cpu().numpy(),
-            cmap="viridis"
-        )
-        print(f"Saved sample: {out_path}")
+    out_path = run_dir / sample_filename
+    plt.imsave(
+        out_path,
+        sample_img_vis.squeeze().cpu().numpy(),
+        cmap="viridis"
+    )
+    print(f"Saved sample: {out_path}")
 
 
 

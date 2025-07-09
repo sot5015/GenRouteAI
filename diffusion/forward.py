@@ -27,6 +27,15 @@ def forward_diffusion_sample(x_0, t, alpha_bar, noise = None):
     return x_t, noise
 
 if __name__ == "__main__":
+    """
+Example:
+
+    B, C, H, W = 4, 1, 64, 64
+    T = 1000
+    x0 = torch.randn(B, C, H, W)
+    t = torch.randint(0, T, (B,))
+    x_t, noise = forward_diffusion_sample(x0, t, alpha_bar)
+"""
     # Dummy test
     B, C, H, W = 4, 1, 64, 64
     T = 1000
