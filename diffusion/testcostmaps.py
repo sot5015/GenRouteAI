@@ -5,13 +5,16 @@ import torch.nn.functional as F
 from model import UNet
 from betaSchedule import linear_beta_schedule, get_alpha, get_alpha_bar
 
-# Purpose:
-# Test if the diffusion model can reconstruct a costmap 
+# ---------------------------------------------------
+# PURPOSE:
+# Test if the diffusion model can reconstruct a costmap
 # given a heightmap with missing data (masked regions).
-# Compares the model's prediction to the ground-truth
-# and visualizes the difference.
+# Compares prediction to GT and visualizes the difference.
+# ---------------------------------------------------
 
-# ----- Load original heightmap & costmap -----
+# -------------------------------
+# LOAD HEIGHTMAP & COSTMAP
+# -------------------------------
 heightmap_path = "data/elevation/hei7.npy"
 costmap_path = "data/costmaps/hei7_costmap.npy"
 
@@ -21,7 +24,9 @@ costmap_gt = np.load(costmap_path)
 # Normalize heightmap to [0, 1]
 heightmap = (heightmap - heightmap.min()) / (heightmap.max() - heightmap.min() + 1e-8)
 
-# ----- Create mask -----
+# -------------------------------
+# GENERATE MASK
+# -------------------------------
 def generate_random_mask(shape, block_size=32, num_blocks=10):
     mask = np.ones(shape, dtype=np.float32)
     H, W = shape
@@ -50,7 +55,9 @@ plt.title("Masked Heightmap")
 
 plt.show()
 
-# ----- Prepare model -----
+# -------------------------------
+# PREPARE MODEL
+# -------------------------------
 device = "mps" if torch.backends.mps.is_available() else "cpu"
 T = 1000
 
@@ -59,12 +66,14 @@ alpha = get_alpha(beta).to(device)
 alpha_bar = get_alpha_bar(alpha).to(device)
 
 # Load trained model
-ckpt_path = "results/diffusion-20250712-222239/diffusion_model.pt"
+ckpt_path = "results/diffusion-20250712-173753/diffusion_model.pt"
 model = UNet(in_channels=2).to(device)
 model.load_state_dict(torch.load(ckpt_path, map_location=device))
 model.eval()
 
-# ----- Prepare input -----
+# -------------------------------
+# PREPARE INPUT
+# -------------------------------
 # Resize masked heightmap
 masked_heightmap_tensor = torch.tensor(masked_heightmap, dtype=torch.float32).unsqueeze(0).unsqueeze(0).to(device)
 masked_heightmap_tensor = F.interpolate(
@@ -77,11 +86,13 @@ masked_heightmap_tensor = F.interpolate(
 # Start from pure noise
 x_t = torch.randn((1, 1, 256, 256), device=device)
 
-# ----- Reverse Sampling Loop -----
+# -------------------------------
+# REVERSE SAMPLING LOOP
+# -------------------------------
 for curr_t in reversed(range(T)):
     t = torch.full((1,), curr_t, device=device, dtype=torch.long)
 
-    # Concatenate noise and masked heightmap
+    # Concatenate noise + masked heightmap
     x_input = torch.cat([x_t, masked_heightmap_tensor], dim=1)
 
     with torch.no_grad():
@@ -105,13 +116,29 @@ for curr_t in reversed(range(T)):
     else:
         x_t = x0_pred
 
-# Convert result
+# -------------------------------
+# CONVERT PREDICTION
+# -------------------------------
 pred_costmap = x_t.squeeze().cpu().numpy()
+
+# For plotting: bring to [0, 1]
 pred_costmap_vis = (pred_costmap + 1) / 2
 pred_costmap_vis = np.clip(pred_costmap_vis, 0, 1)
 
-# ----- Resize ground-truth costmap -----
-costmap_gt_tensor = torch.tensor(costmap_gt, dtype=torch.float32).unsqueeze(0).unsqueeze(0)
+# -------------------------------
+# NORMALIZE GT COSTMAP LIKE TRAINING
+# -------------------------------
+# Training used min-max scaling to [-1, 1] per sample.
+cmin = costmap_gt.min()
+cmax = costmap_gt.max()
+if (cmax - cmin) > 0:
+    costmap_gt_norm = (costmap_gt - cmin) / (cmax - cmin)
+    costmap_gt_norm = costmap_gt_norm * 2 - 1
+else:
+    costmap_gt_norm = np.zeros_like(costmap_gt)
+
+# Resize GT
+costmap_gt_tensor = torch.tensor(costmap_gt_norm, dtype=torch.float32).unsqueeze(0).unsqueeze(0)
 costmap_gt_resized = F.interpolate(
     costmap_gt_tensor,
     size=(256, 256),
@@ -119,69 +146,38 @@ costmap_gt_resized = F.interpolate(
     align_corners=False
 ).squeeze().numpy()
 
-# Normalize GT costmap for comparison → scale to [0, 1]
-costmap_gt_resized_norm = (costmap_gt_resized - costmap_gt_resized.min()) / (costmap_gt_resized.max() - costmap_gt_resized.min() + 1e-8)
+# For plotting: bring to [0, 1]
+costmap_gt_vis = (costmap_gt_resized + 1) / 2
+costmap_gt_vis = np.clip(costmap_gt_vis, 0, 1)
 
-# ----- Plot sampling result -----
+print("Pred costmap range:", pred_costmap.min(), pred_costmap.max())
+print("GT costmap range:", costmap_gt_resized.min(), costmap_gt_resized.max())
+
+# -------------------------------
+# PLOT
+# -------------------------------
 plt.figure(figsize=(12,4))
 plt.subplot(1,3,1)
-plt.imshow(costmap_gt_resized_norm, cmap="viridis")
+plt.imshow(costmap_gt_vis, cmap="viridis")
 plt.title("Ground Truth Costmap (resized)")
 plt.colorbar()
 
 plt.subplot(1,3,2)
 plt.imshow(pred_costmap_vis, cmap="viridis")
-plt.title("Predicted Costmap (sampling)")
+plt.title("Predicted Costmap (masked input)")
 plt.colorbar()
 
 plt.subplot(1,3,3)
-plt.imshow(np.abs(pred_costmap_vis - costmap_gt_resized_norm), cmap="hot")
-plt.title("Absolute Difference (sampling)")
+plt.imshow(np.abs(pred_costmap_vis - costmap_gt_vis), cmap="hot")
+plt.title("Absolute Difference")
 plt.colorbar()
 
 plt.tight_layout()
 plt.show()
 
-mae_sampling = np.mean(np.abs(pred_costmap_vis - costmap_gt_resized_norm))
-print("MAE (sampling):", mae_sampling)
-
-# ==================================================================
-# ---- Pure reconstruction test ------------------------------------
-# This tests only the UNet at t=0, no diffusion sampling
-# ==================================================================
-
-t_zero = torch.zeros((1,), device=device, dtype=torch.long)
-
-# Use zeros as dummy costmap channel
-dummy_costmap_channel = torch.zeros_like(masked_heightmap_tensor)
-x_input_direct = torch.cat([dummy_costmap_channel, masked_heightmap_tensor], dim=1)
-
-with torch.no_grad():
-    pred_costmap_direct = model(x_input_direct, t_zero)
-
-pred_costmap_direct_vis = pred_costmap_direct.squeeze().cpu().numpy()
-pred_costmap_direct_vis = (pred_costmap_direct_vis + 1) / 2
-pred_costmap_direct_vis = np.clip(pred_costmap_direct_vis, 0, 1)
-
-# Plot direct reconstruction
-plt.figure(figsize=(12,4))
-plt.subplot(1,3,1)
-plt.imshow(costmap_gt_resized_norm, cmap="viridis")
-plt.title("Ground Truth Costmap (resized)")
-plt.colorbar()
-
-plt.subplot(1,3,2)
-plt.imshow(pred_costmap_direct_vis, cmap="viridis")
-plt.title("Predicted Costmap (Direct UNet)")
-plt.colorbar()
-
-plt.subplot(1,3,3)
-plt.imshow(np.abs(pred_costmap_direct_vis - costmap_gt_resized_norm), cmap="hot")
-plt.title("Absolute Difference (Direct)")
-plt.colorbar()
-
-plt.tight_layout()
-plt.show()
-
-mae_direct = np.mean(np.abs(pred_costmap_direct_vis - costmap_gt_resized_norm))
-print("MAE (Direct Reconstruction):", mae_direct)
+# -------------------------------
+# COMPUTE MAE
+# -------------------------------
+# MAE should be computed in [-1, 1] range
+mae = np.mean(np.abs(pred_costmap - costmap_gt_resized))
+print("MAE ([-1,1]):", mae)

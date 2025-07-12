@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-# Positional embedding for timestep t
 class SinusoidalTimeEmbedding(nn.Module):
     def __init__(self, dim):
         super().__init__()
@@ -19,7 +18,6 @@ class SinusoidalTimeEmbedding(nn.Module):
         emb = torch.cat([torch.sin(emb), torch.cos(emb)], dim=-1)
         return emb
 
-# conv block with BatchNorm
 def conv_block(in_channels, out_channels):
     return nn.Sequential(
         nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1),
@@ -30,9 +28,8 @@ def conv_block(in_channels, out_channels):
         nn.ReLU()
     )
 
-# U-Net with timestep embeddings
 class UNet(nn.Module):
-    def __init__(self, in_channels=1, time_emb_dim=128):
+    def __init__(self, in_channels=2, time_emb_dim=128):
         super().__init__()
         self.time_mlp = nn.Sequential(
             SinusoidalTimeEmbedding(time_emb_dim),
@@ -56,7 +53,23 @@ class UNet(nn.Module):
         self.up1 = nn.ConvTranspose2d(128, 64, kernel_size=2, stride=2)
         self.dec1 = conv_block(128, 64)
 
-        self.out_conv = nn.Conv2d(64, in_channels, kernel_size=1)
+        self.out_conv = nn.Sequential(
+        nn.Conv2d(64, 1, kernel_size=1),
+        nn.Tanh()
+        )
+
+    def center_crop(self, enc_feature, target_feature):
+        _, _, H, W = enc_feature.size()
+        _, _, target_H, target_W = target_feature.size()
+        diff_H = H - target_H
+        diff_W = W - target_W
+
+        crop_top = diff_H // 2
+        crop_bottom = crop_top + target_H
+        crop_left = diff_W // 2
+        crop_right = crop_left + target_W
+
+        return enc_feature[:, :, crop_top:crop_bottom, crop_left:crop_right]
 
     def forward(self, x, t):
         B, _, H, W = x.shape
@@ -66,30 +79,33 @@ class UNet(nn.Module):
         t2 = self.time_proj2(t_emb).view(B, 128, 1, 1)
         t3 = self.time_proj3(t_emb).view(B, 256, 1, 1)
 
-        # Encoder
-        x1 = self.enc1(x)
-        x1 = x1 + t1
-        x2 = self.pool1(x1)
-        x2 = self.enc2(x2)
-        x2 = x2 + t2
+        x1 = self.enc1(x) + t1
+        x2 = self.enc2(self.pool1(x1)) + t2
+        x3 = self.bottleneck(self.pool2(x2)) + t3
 
-        # Bottleneck
-        x3 = self.pool2(x2)
-        x3 = self.bottleneck(x3)
-        x3 = x3 + t3
-
-        # Decoder
         x = self.up2(x3)
-        x = self.dec2(torch.cat([x, x2], dim=1))
+        x2_cropped = self.center_crop(x2, x)
+        x = self.dec2(torch.cat([x, x2_cropped], dim=1))
+
         x = self.up1(x)
-        x = self.dec1(torch.cat([x, x1], dim=1))
+        x1_cropped = self.center_crop(x1, x)
+        x = self.dec1(torch.cat([x, x1_cropped], dim=1))
 
         return self.out_conv(x)
 
-# Optional test
+# Test run
 if __name__ == "__main__":
+    # model = UNet()
+    # noisy_costmap = torch.randn(4, 1, 64, 64)
+    # heightmap = torch.randn(4, 1, 64, 64)
+    # t = torch.randint(0, 1000, (4,))
+    # model_input = torch.cat([noisy_costmap, heightmap], dim=1)
+    # out = model(model_input, t)
+    # print("Output shape:", out.shape)
+
+    x = torch.randn(1, 128, 172, 172)
+    x2 = torch.randn(1, 128, 173, 173)
+
     model = UNet()
-    x = torch.randn(4, 1, 64, 64)
-    t = torch.randint(0, 1000, (4,))
-    out = model(x, t)
-    print("Output shape:", out.shape)
+    x2_cropped = model.center_crop(x2, x)
+    print(x2_cropped.shape)  # Should be [1, 128, 172, 172
