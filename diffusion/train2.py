@@ -16,6 +16,7 @@ BATCH_SIZE = 24
 LR = 5e-5
 NUM_EPOCHS = 1000
 SAVE_EVERY = 10
+MEAN_PENALTY_WEIGHT = 0.1     # <--- μπορείς να το πειράξεις αν θες
 
 # ----- Device check: cross-platform -----
 if torch.cuda.is_available():
@@ -73,15 +74,25 @@ for epoch in progress_bar:
         costmap = costmap.to(device)
         heightmap = heightmap.to(device)
 
+        # Sample timestep
         t = torch.randint(0, T, (B,), device=device)
         x_t, noise = forward_diffusion_sample(costmap, t, alpha_bar)
 
-        # Combine costmap + heightmap
+        # Concatenate noisy costmap + heightmap
         x_input = torch.cat([x_t, heightmap], dim=1)  # (B, 2, H, W)
 
+        # Model prediction
         predicted_noise = model(x_input, t)
 
-        loss = torch.mean((predicted_noise - noise) ** 2)
+        # --- Compute losses ---
+        mse_loss = torch.mean((predicted_noise - noise) ** 2)
+
+        mean_pred = predicted_noise.mean()
+        mean_target = noise.mean()
+        mean_bias_loss = (mean_pred - mean_target) ** 2
+
+        # Total loss
+        loss = mse_loss + MEAN_PENALTY_WEIGHT * mean_bias_loss
 
         optimizer.zero_grad()
         loss.backward()
@@ -97,7 +108,12 @@ for epoch in progress_bar:
     if (epoch + 1) % SAVE_EVERY == 0 or (epoch + 1) == NUM_EPOCHS:
         ckpt_path = os.path.join(save_dir, f"model_epoch_{epoch+1}.pt")
         torch.save(model.state_dict(), ckpt_path)
-        print(f"[Epoch {epoch+1}] Loss: {mean_epoch_loss:.4f} | Saved: {ckpt_path}")
+        print(
+            f"[Epoch {epoch+1}] Loss: {mean_epoch_loss:.6f} "
+            f"| Last MSE Loss: {mse_loss.item():.6f} "
+            f"| Mean Bias Loss: {mean_bias_loss.item():.6f} "
+            f"| Saved: {ckpt_path}"
+        )
 
 # ----- End -----
 elapsed = time.time() - start_time

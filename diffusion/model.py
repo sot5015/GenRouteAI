@@ -53,10 +53,8 @@ class UNet(nn.Module):
         self.up1 = nn.ConvTranspose2d(128, 64, kernel_size=2, stride=2)
         self.dec1 = conv_block(128, 64)
 
-        self.out_conv = nn.Sequential(
-        nn.Conv2d(64, 1, kernel_size=1),
-        nn.Tanh()
-        )
+        # NO tanh here!
+        self.out_conv = nn.Conv2d(64, 1, kernel_size=1)
 
     def center_crop(self, enc_feature, target_feature):
         _, _, H, W = enc_feature.size()
@@ -95,17 +93,9 @@ class UNet(nn.Module):
 
 # Test run
 if __name__ == "__main__":
-    # model = UNet()
-    # noisy_costmap = torch.randn(4, 1, 64, 64)
-    # heightmap = torch.randn(4, 1, 64, 64)
-    # t = torch.randint(0, 1000, (4,))
-    # model_input = torch.cat([noisy_costmap, heightmap], dim=1)
-    # out = model(model_input, t)
-    # print("Output shape:", out.shape)
-
     x = torch.randn(1, 128, 172, 172)
     x2 = torch.randn(1, 128, 173, 173)
 
     model = UNet()
     x2_cropped = model.center_crop(x2, x)
-    print(x2_cropped.shape)  # Should be [1, 128, 172, 172
+    print(x2_cropped.shape)  # Should be [1, 128, 172, 172]
