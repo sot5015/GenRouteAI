@@ -105,7 +105,7 @@ device = "mps" if torch.backends.mps.is_available() else "cpu"
 T = 100
 
 # Load model
-ckpt_path = "results/diffusion-20250713-133312/diffusion_model.pt"
+ckpt_path = "results/diffusion-20250713-220255/diffusion_model.pt"
 model = UNet(in_channels=2).to(device)
 model.load_state_dict(torch.load(ckpt_path, map_location=device))
 model.eval()
@@ -207,10 +207,12 @@ else:
     print(f"Path found with length: {len(path)}")
     print(f"Total path cost: {total_cost}")
 
-    heightmap_vis = (heightmap_norm * 255).astype(np.uint8)
     plt.figure(figsize=(8,6))
-    plt.imshow(heightmap_vis, cmap="gray")
+    plt.imshow(pred_costmap_vis, cmap="viridis")
     y_coords, x_coords = zip(*path)
     plt.plot(x_coords, y_coords, color="red", linewidth=2)
-    plt.title("Optimal Path over Heightmap")
+    plt.title("Optimal Path over Predicted Costmap")
+    plt.colorbar(label="Predicted Cost")
     plt.show()
+    # y_coords, x_coords = zip(*path)
+    
