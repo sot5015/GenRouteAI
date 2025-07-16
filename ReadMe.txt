@@ -32,6 +32,28 @@ By default, this script will:
 - save checkpoints to models/
 
 
+How to Test Predicted Costmaps
+--------------------
+
+To test the performance of your model on new heightmaps:
+
+Open runPipeline.py and edit variables:
+
+heightmap_path to point to a processed elevation .npy file
+
+costmap_gt_path to the corresponding ground truth costmap
+
+ckpt_path to the path of a trained model
+
+Run: python runPipeline.py
+
+The script will:
+Apply masking to the heightmap
+Predict the costmap using the diffusion model
+Compare the result with the ground truth using MAE (Mean Absolute Error)
+Plan a path using A* and visualize it on the predicted costmap
+
+
 Notes for our files:
 ----------------------
 
