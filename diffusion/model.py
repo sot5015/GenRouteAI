@@ -2,6 +2,27 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+"""
+model.py
+
+Defines the UNet architecture for the diffusion model used in costmap prediction.
+
+Description:
+- Takes as input a 2-channel tensor:
+    [0]: Noisy costmap at timestep t
+    [1]: Masked heightmap
+- Injects time embeddings at multiple scales into the network.
+- Outputs predicted noise residual matching the added noise.
+
+Components:
+- SinusoidalTimeEmbedding:
+    Encodes timestep information into a vector.
+- UNet:
+    Encoder-decoder structure with skip connections.
+    Center cropping ensures feature alignment during upsampling.
+
+"""
+
 class SinusoidalTimeEmbedding(nn.Module):
     def __init__(self, dim):
         super().__init__()

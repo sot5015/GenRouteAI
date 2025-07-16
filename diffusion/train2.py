@@ -10,6 +10,42 @@ import time
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
+
+"""
+train2.py
+
+Training script for the diffusion model that predicts costmaps from heightmaps with missing data.
+
+Pipeline Overview:
+------------------
+1. Loads a dataset of heightmaps (elevation maps) and ground truth costmaps.
+2. Applies random timestep noise to the costmaps (forward diffusion process).
+3. Trains a UNet model to predict the added noise, conditioned on:
+    - the noisy costmap
+    - the corresponding (possibly masked) heightmap
+4. Computes loss:
+    - Mean Squared Error (MSE) between predicted and true noise
+    - Mean bias penalty to stabilize global statistics
+5. Tracks and saves:
+    - Model checkpoints every N epochs
+    - Loss curve plot
+    - Final trained model
+
+Features:
+---------
+- Supports CUDA and Apple MPS acceleration.
+- Uses a linear beta schedule for the diffusion process.
+- Includes gradient clipping for training stability.
+- Handles dynamic dataset sizes via DataLoader.
+
+Output:
+-------
+- Checkpoints of model weights during training
+- Loss curve figure
+- Final trained diffusion model ready for inference
+
+"""
+
 # ----- Hyperparameters -----
 T = 1000
 BATCH_SIZE = 24
