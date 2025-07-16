@@ -108,3 +108,7 @@ Predicts a costmap from a masked heightmap.
 Runs A\* path planning on the predicted costmap and visualizes results.
 
 
+Code Division
+
+Due to rewriting code for code improment both member had to work in all part of the code, except from runPipeline which was made by Demirtzoglou 
+
