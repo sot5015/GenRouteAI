@@ -2,7 +2,38 @@ Info:
  
 This project processes terrain heightmap images to generate costmaps and uses a diffusion model to predict optimal paths through partially known terrain.
 
-Notes:
+Requirements & Installation
+----------------------------
+
+Python Version: >= 3.Χ
+
+Required Python libraries:
+
+- numpy
+- torch
+- torchvision
+- matplotlib
+- tqdm
+- Pillow
+- scikit-image
+
+How to Run Training
+--------------------
+
+Train the diffusion model with:
+
+    python train2.py
+
+By default, this script will:
+
+- load heightmaps and costmaps from data/elevation/ and data/costmaps/
+- apply random masking to the heightmaps
+- train the conditional diffusion model
+- save checkpoints to models/
+
+
+Notes for our files:
+----------------------
 
 Organize your data in `data/heightmaps`, `data/elevation`, and `data/costmaps` folders.
 Model checkpoints and results are saved in timestamped folders inside `results/`.
@@ -55,12 +86,3 @@ Predicts a costmap from a masked heightmap.
 Runs A\* path planning on the predicted costmap and visualizes results.
 
 
-Dependencies:
-
-Python 3.x
-PyTorch
-NumPy
-OpenCV
-scikit-learn
-Matplotlib
-tqdm
