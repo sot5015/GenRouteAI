@@ -7,6 +7,36 @@ import os
 from model import UNet
 from betaSchedule import linear_beta_schedule, get_alpha, get_alpha_bar
 
+
+"""
+runPipeline.py
+
+Script for testing the diffusion model pipeline for costmap prediction and path planning.
+
+Pipeline Overview:
+------------------
+1. Loads a ground truth heightmap (elevation map) and costmap from disk.
+2. Normalizes the heightmap and randomly masks regions to simulate missing terrain data.
+3. Uses a trained diffusion model (UNet) to predict the complete costmap from the masked heightmap.
+4. Applies bias correction to align the predicted costmap's global mean to the ground truth.
+5. Computes the Mean Absolute Error (MAE) between the predicted and ground truth costmaps.
+6. Plots:
+    - Ground truth costmap
+    - Predicted costmap
+    - Absolute difference map
+7. Runs the A* path planning algorithm on the predicted costmap.
+8. Visualizes the optimal path:
+    - Over the predicted costmap (currently implemented)
+    - (could be) Over the masked or reconstructed heightmap
+
+Notes:
+------
+- The purpose of this pipeline is to test whether the diffusion model can reconstruct realistic costmaps from incomplete heightmaps, and how well the predicted costmaps can support downstream tasks like path planning.
+- The red path plotted shows the optimal route computed on the predicted costmap, visualized for analysis.
+
+"""
+
+
 # ---------------------------------------------------
 # FUNCTIONS
 # ---------------------------------------------------
@@ -67,8 +97,8 @@ def reconstruct_path(came_from, current):
 # LOAD DATA
 # ---------------------------------------------------
 
-heightmap_path = "data/elevation/hei7.npy"
-costmap_gt_path = "data/costmaps/hei7_costmap.npy"
+heightmap_path = "data/elevation/hei22.npy"
+costmap_gt_path = "data/costmaps/hei22_costmap.npy"
 
 heightmap = np.load(heightmap_path)
 costmap_gt = np.load(costmap_gt_path)
@@ -164,7 +194,7 @@ pred_costmap_vis = (pred_costmap_corrected + 1) / 2
 pred_costmap_vis = np.clip(pred_costmap_vis, 1e-5, 1.0)  # avoid zero costs for A*
 
 # Save predicted costmap
-np.save("data/costmaps/pred_costmap.npy", pred_costmap_vis)
+np.save("data/costmaps/pred_costmap22.npy", pred_costmap_vis)
 
 # ---------------------------------------------------
 # PLOT GT vs Predicted Costmap

@@ -11,13 +11,13 @@ def linear_beta_schedule(timesteps):
 
 def get_alpha(beta):
     """
-    Compute alpha values from beta: αₜ = 1 - βₜ
+    Compute alpha values from beta
     """
     return 1. - beta
 
 def get_alpha_bar(alpha):
     """
-    Compute cumulative product of alphas: α̅ₜ = ∏ₛ₌₁ᵗ αₛ
+    Compute cumulative product of alphas
     """
     return torch.cumprod(alpha, dim=0)
 

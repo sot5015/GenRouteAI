@@ -3,6 +3,34 @@ import torch
 from torch.utils.data import Dataset
 import torch.nn.functional as F
 
+
+"""
+dataset.py
+
+Defines the PyTorch Dataset used to train the diffusion model
+for costmap prediction from heightmaps.
+
+Description:
+- Loads pairs of:
+    - heightmaps (elevation arrays, .npy files)
+    - ground truth costmaps (.npy files)
+- Resizes data to target resolution.
+- Normalizes:
+    - heightmaps to [0,1]
+    - costmaps to [-1,1]
+- Optionally applies random block masking to heightmaps
+  to simulate incomplete terrain data.
+
+Returns:
+masked_heightmap : torch.Tensor
+    Masked heightmap (1, H, W), normalized in [0,1].
+costmap : torch.Tensor
+    Ground truth costmap (1, H, W), normalized in [-1,1].
+mask : torch.Tensor
+    Binary mask (H, W), 1 = observed, 0 = masked.
+
+"""
+
 class HeightmapDataset(Dataset):
     def __init__(self, heightmap_paths, costmap_paths, target_size=(256, 256), apply_masking=True):
         self.heightmap_paths = heightmap_paths
@@ -50,7 +78,7 @@ class HeightmapDataset(Dataset):
         else:
             costmap = torch.zeros_like(costmap)
 
-        # Optional: Masking
+        #  Masking
         if self.apply_masking:
             mask = self.generate_random_mask(heightmap.shape[-2:])
             masked_heightmap = heightmap * mask + (1 - mask) * 0.5  # fill missing with mean

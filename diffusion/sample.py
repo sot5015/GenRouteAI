@@ -130,10 +130,10 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--costmap_path", type=str, default="/Users/DELL/Downloads/NasaJobApplication-main-2/data/costmaps/hei14_costmap.npy" ,help="trst")
     parser.add_argument("--ckpt_path", type=str, required=True, help="Path to diffusion_model.pt")
     parser.add_argument("--save_dir", type=str, default="results", help="Directory to save samples")
-    parser.add_argument("--num_samples", type=int, default=5, help="Number of samples to generate")
+    parser.add_argument("--num_samples", type=int, default=1, help="Number of samples to generate")
+    parser.add_argument("--costmap_path", type=str, default=None, help="Path to a costmap .npy file for reference (optional).")
     args = parser.parse_args()
 
     main(args)

@@ -4,6 +4,45 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 import os
 
+
+"""
+bestPathFind.py
+
+Converts elevation maps (heightmaps) into costmaps for path planning.
+
+Pipeline Overview:
+------------------
+1. Loads elevation data stored as .npy arrays.
+2. Computes traversal costs using a custom pathfinding-inspired algorithm:
+    - Penalizes upward slopes more than downward slopes.
+    - Uses local differences between neighboring pixels to estimate step cost.
+3. Stores the total accumulated cost from the start pixel (0,0) to every other pixel.
+4. Saves the resulting costmaps for later use in path planning.
+
+Features:
+---------
+- Progress bar via tqdm for visual feedback during processing.
+- Skips files already processed.
+- Handles large images by processing pixel-by-pixel with a priority queue (Dijkstra/A*-like).
+- Outputs costmaps as .npy files.
+
+Cost Computation Rules:
+-----------------------
+- Moving uphill → cost increases by height difference × 0.1
+- Moving downhill → cost increases by height difference × 0.02
+- Moving on flat terrain → fixed cost of 1
+
+Output:
+-------
+- Costmap arrays saved in `data/costmaps/`
+- Statistics printed for each processed costmap:
+    - Min cost
+    - Max cost
+    - Check for infinite values
+
+"""
+
+
 def min_sum_path_with_trace(npy_path, start):
     grid = np.load(npy_path, allow_pickle=True)
     rows, cols = grid.shape
@@ -35,13 +74,13 @@ def min_sum_path_with_trace(npy_path, start):
             if 0 <= nx < rows and 0 <= ny < cols:
 
                 if grid[x, y] < grid[nx, ny]:
-                    step_cost = (grid[nx, ny] - grid[x, y]) * 0.1
+                    step_cost = (grid[nx, ny] - grid[x, y]) * 0.1 
                 elif grid[x, y] == grid[nx, ny]:
                     step_cost = 1
                 else:
                     step_cost = (grid[x, y] - grid[nx, ny]) * 0.02
 
-                new_cost = cost + step_cost
+                new_cost = cost + step_cost 
 
                 if (nx, ny) not in costs or new_cost < costs[(nx, ny)]:
                     costs[(nx, ny)] = new_cost

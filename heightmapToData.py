@@ -4,6 +4,48 @@ from sklearn.neighbors import KDTree
 import matplotlib.pyplot as plt
 from pathlib import Path
 
+"""
+heightmapToData.py
+
+Converts color-coded heightmap images into numerical elevation arrays
+by matching pixel colors against a reference colorbar image.
+
+Pipeline Overview:
+------------------
+1. Loads a colorbar image representing elevation color coding (e.g. Mars DEM).
+2. Creates a mapping between RGB colors and elevation values along the colorbar axis.
+3. Loads the heightmap image.
+4. Converts each pixel in the heightmap into an elevation value
+   using nearest-neighbor color matching via a KD-tree.
+5. Optionally plots the elevation map and saves it as a .npy file.
+
+Features:
+---------
+- Efficient color matching with scikit-learn's KDTree.
+- Works with colorbars of arbitrary width and resolution.
+- Optional plotting of the extracted elevation map.
+- Supports saving output elevation maps for further processing.
+
+Use Cases:
+----------
+- Preprocessing heightmaps for terrain analysis.
+- Preparing elevation data for costmap computation and path planning.
+- Visualizing planetary surfaces in scientific applications.
+
+Inputs:
+-------
+- Heightmap image (JPG, PNG, etc.)
+- Colorbar image (horizontal bar with color-to-elevation mapping)
+- Min and max elevation values matching the colorbar scale.
+
+Outputs:
+--------
+- 2D numpy array containing elevation values per pixel.
+- Optional visualization plot.
+- Optional .npy file with the elevation array.
+
+"""
+
 
 def extract_color_value_mapping(colorbar_img, min_val, max_val):
     """Extracts a mapping from color to elevation value using a horizontal colorbar."""
